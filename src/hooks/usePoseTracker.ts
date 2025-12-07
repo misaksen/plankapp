@@ -8,6 +8,8 @@ import {
 import { evaluatePlankConfidence } from '../utils/pose'
 import type { PosePhase } from '../types/session'
 
+type CameraFacingMode = 'environment' | 'user'
+
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task'
 const MEDIAPIPE_VERSION = '0.10.22-rc.20250304'
@@ -27,11 +29,32 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
   const animationRef = useRef<number | null>(null)
   const calibrationUntilRef = useRef(0)
   const previousPhaseRef = useRef<PosePhase>('idle')
+  const facingModeRef = useRef<CameraFacingMode>('environment')
 
   const [phase, setPhase] = useState<PosePhase>('idle')
   const [confidence, setConfidence] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const buildCameraErrorMessage = useCallback((err: unknown) => {
+    let message = 'Unable to start camera.'
+    if (err instanceof DOMException) {
+      if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
+        message =
+          'Camera permission was blocked. Please allow camera access in your browser settings and try again.'
+      } else if (err.name === 'NotReadableError') {
+        message = 'Camera is already in use by another app. Close it and retry.'
+      } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+        message = 'No compatible camera was found on this device.'
+      }
+    } else if (err instanceof Error) {
+      message = err.message
+    }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      message += ' (Tip: mobile browsers require HTTPS for camera access.)'
+    }
+    return message
+  }, [])
 
   const drawSkeleton = useCallback((landmarks: NormalizedLandmark[]) => {
     const canvas = canvasRef.current
@@ -151,53 +174,85 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
     animationRef.current = requestAnimationFrame(evaluateFrame)
   }, [drawSkeleton, handlePhaseChange])
 
-  const start = useCallback(async () => {
-    if (loading) {
-      return
-    }
-    setError(null)
-    setLoading(true)
-    try {
-      await ensureLandmarker()
+  const initStream = useCallback(
+    async (mode: CameraFacingMode) => {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera API unavailable on this device.')
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop())
+      streamRef.current = null
+      const video = videoRef.current
+      if (video) {
+        video.srcObject = null
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment',
+          facingMode: mode,
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
       })
       streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+      facingModeRef.current = mode
+      if (video) {
+        video.srcObject = stream
+        await video.play()
       }
       calibrationUntilRef.current = Date.now() + 1500
       previousPhaseRef.current = 'calibrating'
       setPhase('calibrating')
-      animationRef.current = requestAnimationFrame(evaluateFrame)
-    } catch (err) {
-      let message = 'Unable to start camera.'
-      if (err instanceof DOMException) {
-        if (err.name === 'NotAllowedError' || err.name === 'SecurityError') {
-          message =
-            'Camera permission was blocked. Please allow camera access in your browser settings and try again.'
-        } else if (err.name === 'NotReadableError') {
-          message = 'Camera is already in use by another app. Close it and retry.'
-        } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
-          message = 'No compatible rear camera was found on this device.'
-        }
-      } else if (err instanceof Error) {
-        message = err.message
+      if (!animationRef.current) {
+        animationRef.current = requestAnimationFrame(evaluateFrame)
       }
-      if (typeof window !== 'undefined' && !window.isSecureContext) {
-        message += ' (Tip: mobile browsers require HTTPS for camera access.)'
+    },
+    [evaluateFrame],
+  )
+
+  const start = useCallback(
+    async (mode: CameraFacingMode = facingModeRef.current) => {
+      if (loading) {
+        return
       }
-      setError(message)
-      stopStream()
-    } finally {
-      setLoading(false)
-    }
-  }, [ensureLandmarker, evaluateFrame, loading, stopStream])
+      setError(null)
+      setLoading(true)
+      try {
+        await ensureLandmarker()
+        await initStream(mode)
+      } catch (err) {
+        const message = buildCameraErrorMessage(err)
+        setError(message)
+        stopStream()
+      } finally {
+        setLoading(false)
+      }
+    },
+    [buildCameraErrorMessage, ensureLandmarker, initStream, loading, stopStream],
+  )
+
+  const switchFacing = useCallback(
+    async (mode: CameraFacingMode) => {
+      facingModeRef.current = mode
+      if (!streamRef.current) {
+        return
+      }
+      if (loading) {
+        return
+      }
+      setError(null)
+      setLoading(true)
+      try {
+        await ensureLandmarker()
+        await initStream(mode)
+      } catch (err) {
+        const message = buildCameraErrorMessage(err)
+        setError(message)
+        stopStream()
+      } finally {
+        setLoading(false)
+      }
+    },
+    [buildCameraErrorMessage, ensureLandmarker, initStream, loading, stopStream],
+  )
 
   const stop = useCallback(() => {
     stopStream()
@@ -216,6 +271,7 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
     loading,
     error,
     start,
+    switchFacing,
     stop,
   }
 }

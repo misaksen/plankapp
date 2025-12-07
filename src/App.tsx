@@ -11,6 +11,7 @@ function App() {
   const [now, setNow] = useState(Date.now())
   const [isOnline, setIsOnline] = useState(() => navigator.onLine)
   const [pendingStart, setPendingStart] = useState(false)
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment')
   const secureContext = typeof window !== 'undefined' ? window.isSecureContext : true
 
   const history = useSessionStore((state) => state.history)
@@ -30,6 +31,7 @@ function App() {
     loading,
     error,
     start,
+    switchFacing,
     stop,
   } = usePoseTracker({
     onPhaseChange: (nextPhase, _confidence, timestamp) => {
@@ -73,7 +75,7 @@ function App() {
     setPendingStart(true)
     try {
       await armAudio()
-      await start()
+      await start(cameraFacing)
       startSession()
     } finally {
       setPendingStart(false)
@@ -92,6 +94,14 @@ function App() {
     const confirmed = window.confirm('Clear all stored sessions?')
     if (confirmed) {
       void resetHistory()
+    }
+  }
+
+  const handleToggleCamera = async () => {
+    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment'
+    setCameraFacing(nextFacing)
+    if (status === 'tracking') {
+      await switchFacing(nextFacing)
     }
   }
 
@@ -128,6 +138,14 @@ function App() {
           </button>
           <button type="button" className="secondary" onClick={handleStop} disabled={status !== 'tracking'}>
             Stop
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={handleToggleCamera}
+            disabled={!cameraSupported || loading}
+          >
+            {cameraFacing === 'environment' ? 'Use front camera' : 'Use rear camera'}
           </button>
           <span className={`chip ${isOnline ? 'online' : 'offline'}`}>
             {isOnline ? 'Offline cache ready' : 'Offline mode'}
