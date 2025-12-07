@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Plank Tracker Icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d8c9" />
+      <stop offset="100%" stop-color="#0077ff" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="url(#bg)" />
+  <g fill="none" stroke="#041524" stroke-width="16" stroke-linecap="round">
+    <line x1="48" y1="144" x2="208" y2="144" />
+    <path d="M64 128 L96 112 L160 112 L192 128" />
+    <circle cx="64" cy="160" r="12" fill="#041524" />
+    <circle cx="192" cy="160" r="12" fill="#041524" />
+  </g>
+</svg>
