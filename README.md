@@ -33,6 +33,14 @@ npm run preview
 
 Deploy the `dist/` folder to any static host that serves HTTPS.
 
+### GitHub Pages Deployment
+
+1. Push this project to a GitHub repository named however you like (for example `plankapp`).
+2. GitHub Pages requires HTTPS, so open **Settings → Pages** and choose **GitHub Actions** as the source.
+3. The included workflow at `.github/workflows/deploy.yml` automatically builds the site with `GITHUB_PAGES=true`, uploads the `dist/` bundle, and deploys it via `actions/deploy-pages` whenever you push to `main` (or trigger it manually).
+4. The Vite config looks for the `GITHUB_PAGES` env var and sets `base` to `/<repo>/`, so assets resolve correctly at `https://<user>.github.io/<repo>/`. If you ever rename the repo, the workflow will pick up the new path automatically.
+5. After the first successful run, GitHub will display the live URL in the workflow summary and under **Settings → Pages**.
+
 ## MediaPipe Model Caching
 
 The pose model (`pose_landmarker_lite.task`) and WASM files are requested from Google Cloud storage/JSDelivr the first time you start tracking. The service worker pins these assets so subsequent sessions can run offline. If you need to ship fully offline from the first run, download the task file + `@mediapipe/tasks-vision` wasm bundle and place them under `public/mediapipe`, then update `MODEL_URL` / `WASM_URL` inside `src/hooks/usePoseTracker.ts`.
