@@ -5,6 +5,7 @@ import { useSessionStore } from './state/sessionStore'
 import { CameraPreview } from './components/CameraPreview'
 import { LiveMetrics } from './components/LiveMetrics'
 import { SessionHistory } from './components/SessionHistory'
+import { DailyTrend } from './components/DailyTrend'
 import { useAudioCue } from './hooks/useAudioCue'
 
 function App() {
@@ -181,6 +182,7 @@ function App() {
           latestSession={history[0]}
           now={now}
         />
+        <DailyTrend sessions={history} />
         <SessionHistory sessions={history} onClear={handleClearHistory} />
       </main>
     </div>
