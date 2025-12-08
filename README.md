@@ -8,7 +8,7 @@ Mobile-focused progressive web app that uses the device camera and MediaPipe Pos
 - **Tap-to-start camera flow** that respects permissions and keeps the UI responsive by doing detection in `requestAnimationFrame` loops.
 - **Audio cues while holding** a plank so you get instant feedback without looking at the screen.
 - **Quick camera toggle** lets you swap between rear (environment) and front (selfie) lenses on phones.
-- **Session analytics** showing total time, current hold, break durations, and prior records.
+- **Session analytics** showing total time, current hold, break durations, prior records, and a zoom-adjusted camera feed with optional wide-angle view.
 - **Weekly trendline** surfaces daily plank totals in a sparkline so you can track consistency.
 - **Local-only history** backed by IndexedDB (`idb`) plus a lightweight Zustand store.
 - **Offline-first PWA** via `vite-plugin-pwa`, service-worker caching for MediaPipe models, and installable manifest/icons.
@@ -21,6 +21,8 @@ npm run dev
 ```
 
 Visit the printed URL on a mobile browser, grant camera access after tapping **Start tracking**, and you should see live posture feedback.
+The dev server now runs over HTTPS with a self-signed certificate (courtesy of `@vitejs/plugin-basic-ssl`).
+Allow the certificate warning the first time you load it on each device so the camera APIs become available.
 
 ### Camera Permissions & HTTPS
 

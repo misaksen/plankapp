@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const isGitHubPages = process.env.GITHUB_PAGES === 'true'
 const repoName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? ''
@@ -10,6 +11,7 @@ const base = isGitHubPages && repoName ? `/${repoName}/` : '/'
 export default defineConfig({
   base,
   plugins: [
+    basicSsl(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -72,4 +74,8 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    https: {},
+    host: true,
+  },
 })

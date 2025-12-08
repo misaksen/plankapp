@@ -56,6 +56,31 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
     return message
   }, [])
 
+  const applyWideAngle = useCallback(async (stream: MediaStream) => {
+    const [track] = stream.getVideoTracks()
+    if (!track || typeof track.getCapabilities !== 'function' || typeof track.applyConstraints !== 'function') {
+      return
+    }
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+      zoom?: MediaSettingsRange
+    }
+    const zoomCapability = capabilities.zoom
+    if (!zoomCapability) {
+      return
+    }
+    const targetZoom = zoomCapability.min ?? zoomCapability.max ?? track.getSettings().zoom
+    if (typeof targetZoom !== 'number' || Number.isNaN(targetZoom)) {
+      return
+    }
+    try {
+      await track.applyConstraints({
+        advanced: [{ zoom: targetZoom } as MediaTrackConstraintSet & { zoom: number }],
+      } as MediaTrackConstraints)
+    } catch (err) {
+      console.warn('Unable to adjust camera zoom for wide angle', err)
+    }
+  }, [])
+
   const drawSkeleton = useCallback((landmarks: NormalizedLandmark[]) => {
     const canvas = canvasRef.current
     if (!canvas) {
@@ -198,6 +223,7 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
         video.srcObject = stream
         await video.play()
       }
+      await applyWideAngle(stream)
       calibrationUntilRef.current = Date.now() + 1500
       previousPhaseRef.current = 'calibrating'
       setPhase('calibrating')
@@ -205,7 +231,7 @@ export const usePoseTracker = ({ onPhaseChange }: PoseTrackerOptions = {}) => {
         animationRef.current = requestAnimationFrame(evaluateFrame)
       }
     },
-    [evaluateFrame],
+    [applyWideAngle, evaluateFrame],
   )
 
   const start = useCallback(

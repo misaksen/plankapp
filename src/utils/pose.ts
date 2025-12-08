@@ -55,5 +55,8 @@ export function evaluatePlankConfidence(landmarks: NormalizedLandmark[]): number
   const hipDelta = Math.abs(hips.y - hipMidlineY)
   const hipScore = 1 - clamp(hipDelta / 0.15)
 
-  return clamp((horizontalScore + straightnessScore + hipScore) / 3)
+  const elevationDelta = ankles.y - shoulders.y
+  const elevationScore = clamp((elevationDelta - 0.12) / 0.25)
+
+  return clamp((horizontalScore + straightnessScore + hipScore + elevationScore) / 4)
 }
